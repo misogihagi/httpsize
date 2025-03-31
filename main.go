@@ -1,7 +1,11 @@
 package main
 
 import (
+        "flag"
         "io"
+        "io/ioutil"
+
+        "gopkg.in/yaml.v3"
         "log"
         "net"
         "net/http"
@@ -9,10 +13,40 @@ import (
         "net/url"
 )
 
-const backendURL = "http://localhost:8000"
+type Config struct {
+        Server struct {
+                ListenPort string `yaml:"listen_port"`
+                Domain     string `yaml:"domain"`
+        } `yaml:"server"`
+        Backend struct {
+                URL string `yaml:"url"`
+        } `yaml:"backend"`
+}
+
+func loadConfig(filename string) (*Config, error) {
+        data, err := ioutil.ReadFile(filename)
+        if err != nil {
+                return nil, err
+        }
+        var config Config
+        err = yaml.Unmarshal(data, &config)
+        if err != nil {
+                return nil, err
+        }
+        return &config, nil
+}
 
 func main() {
-        target, err := url.Parse(backendURL)
+
+        configPath := flag.String("config", "config.yaml", "設定ファイルのパス")
+        flag.Parse()
+
+        config, err := loadConfig(*configPath)
+        if err != nil {
+                log.Fatalf("設定ファイルの読み込みに失敗: %v", err)
+        }
+
+        target, err := url.Parse(config.Backend.URL)
         if err != nil {
                 log.Fatalf("ターゲットURLの解析に失敗: %v", err)
         }
@@ -37,8 +71,8 @@ func main() {
                 proxy.ServeHTTP(w, r)
         })
 
-        log.Println("HTTPSリバースプロキシを :4443 で起動中...")
-        err = http.ListenAndServeTLS(":4443", "server.crt", "server.key", nil)
+        log.Println("HTTPSリバースプロキシを", config.Server.ListenPort, "で起動中...")
+        err = http.ListenAndServeTLS(":"+config.Server.ListenPort, "server.crt", "server.key", nil)
         if err != nil {
                 log.Fatalf("HTTPSサーバーの起動に失敗: %v", err)
         }

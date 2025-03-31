@@ -1,0 +1,7 @@
+server:
+  listen_port: "443"           # HTTPS の待ち受けポート
+  domain: "yourdomain.com"     # Let's Encrypt で証明書を取得するドメイン
+  redirect_http: true          # HTTP から HTTPS へリダイレクトするかどうか
+
+backend:
+  url: "http://localhost:8081" # バックエンドのURL
